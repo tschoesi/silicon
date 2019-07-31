@@ -206,8 +206,8 @@ class Z3ProverStdIO(uniqueId: String,
     readSuccess()
 
     val startTime = System.currentTimeMillis()
-    writeLine("(check-sat)")
-//    writeLine("(check-sat-using (par-or smt (with smt :smt.random_seed 0) (with smt :smt.random_seed 77)))")
+//    writeLine("(check-sat)")
+    writeLine("(check-sat-using (par-or smt (with smt :smt.random_seed 0) (with smt :smt.random_seed 77)))")
     val result = readUnsat()
     val endTime = System.currentTimeMillis()
 
