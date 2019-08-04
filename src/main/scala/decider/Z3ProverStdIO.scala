@@ -207,7 +207,7 @@ class Z3ProverStdIO(uniqueId: String,
 
     val checkCommand =
       if (currentTimeout == 0)
-        "(check-sat-using (par-or smt (with smt :smt.random_seed 0) (with smt :smt.random_seed 77)))"
+        "(check-sat-using (par-or (using-params default :random_seed 0) (using-params default :random_seed 77)))"
       else
         "(check-sat)"
 
