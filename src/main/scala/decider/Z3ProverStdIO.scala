@@ -28,7 +28,7 @@ class Z3ProverStdIO(uniqueId: String,
        with LazyLogging {
 
   private var pushPopScopeDepth = 0
-  private var lastTimeout: Int = -1
+  private var currentTimeout: Int = -1
   private var logfileWriter: PrintWriter = _
   private var z3: Process = _
   private var input: BufferedReader = _
@@ -52,7 +52,7 @@ class Z3ProverStdIO(uniqueId: String,
 
   def start() {
     pushPopScopeDepth = 0
-    lastTimeout = -1
+    currentTimeout = -1
     logfileWriter = viper.silver.utility.Common.PrintWriter(Verifier.config.z3LogFile(uniqueId).toFile)
     z3Path = Paths.get(Verifier.config.z3Exe)
     z3 = createZ3Instance()
@@ -205,9 +205,14 @@ class Z3ProverStdIO(uniqueId: String,
     writeLine("(assert (not " + goal + "))")
     readSuccess()
 
+    val checkCommand =
+      if (currentTimeout == 0)
+        "(check-sat-using (par-or smt (with smt :smt.random_seed 0) (with smt :smt.random_seed 77)))"
+      else
+        "(check-sat)"
+
     val startTime = System.currentTimeMillis()
-//    writeLine("(check-sat)")
-    writeLine("(check-sat-using (par-or smt (with smt :smt.random_seed 0) (with smt :smt.random_seed 77)))")
+    writeLine(checkCommand)
     val result = readUnsat()
     val endTime = System.currentTimeMillis()
 
@@ -280,8 +285,8 @@ class Z3ProverStdIO(uniqueId: String,
      * 199 Silver files, the total verification time increased from 60s
      * to 70s if 'set-option' is emitted every time.
      */
-    if (lastTimeout != effectiveTimeout) {
-      lastTimeout = effectiveTimeout
+    if (currentTimeout != effectiveTimeout) {
+      currentTimeout = effectiveTimeout
 
       writeLine(s"(set-option :timeout $effectiveTimeout)")
       readSuccess()
