@@ -33,6 +33,7 @@ object sorts {
   object Bool extends Sort { val id = Identifier("Bool"); override lazy val toString = id.toString }
   object Ref  extends Sort { val id = Identifier("Ref");  override lazy val toString = id.toString }
   object Perm extends Sort { val id = Identifier("Perm"); override lazy val toString = id.toString }
+  object Real extends Sort { val id = Identifier("Real"); override lazy val toString = id.toString }
   object Unit extends Sort { val id = Identifier("()");   override lazy val toString = id.toString }
 
   case class Seq(elementsSort: Sort) extends Sort {
@@ -409,6 +410,14 @@ case class IntLiteral(n: BigInt) extends ArithmeticTerm with Literal {
   override lazy val toString = n.toString()
 }
 
+case class RealLiteral(n: BigDecimal) extends RealArithmeticTerm with Literal {
+  def +(m: Int) = RealLiteral(n + m)
+  def -(m: Int) = RealLiteral(n - m)
+  def *(m: Int) = RealLiteral(n * m)
+  def /(m: Int) = Div(this, RealLiteral(m))
+  override lazy val toString = n.toString()
+}
+
 case class Null() extends Term with Literal {
   val sort = sorts.Ref
   override lazy val toString = "Null"
@@ -574,6 +583,10 @@ sealed abstract class ArithmeticTerm extends Term {
   val sort = sorts.Int
 }
 
+sealed abstract class RealArithmeticTerm extends Term {
+  val sort = sorts.Real
+}
+
 class Plus(val p0: Term, val p1: Term) extends ArithmeticTerm
     with BinaryOp[Term] with StructuralEqualityBinaryOp[Term] {
 
@@ -593,6 +606,25 @@ object Plus extends ((Term, Term) => Term) {
   def unapply(t: Plus) = Some((t.p0, t.p1))
 }
 
+class RealPlus(val p0: Term, val p1: Term) extends RealArithmeticTerm
+  with BinaryOp[Term] with StructuralEqualityBinaryOp[Term] {
+
+  override val op = "+"
+}
+
+object RealPlus extends ((Term, Term) => Term) {
+  import predef.RealZero
+
+  def apply(e0: Term, e1: Term) = (e0, e1) match {
+    case (t0, RealZero) => t0
+    case (RealZero, t1) => t1
+    case (RealLiteral(n0), RealLiteral(n1)) => RealLiteral(n0 + n1)
+    case _ => new RealPlus(e0, e1)
+  }
+
+  def unapply(t: RealPlus) = Some((t.p0, t.p1))
+}
+
 class Minus(val p0: Term, val p1: Term) extends ArithmeticTerm
     with BinaryOp[Term] with StructuralEqualityBinaryOp[Term] {
 
@@ -610,6 +642,25 @@ object Minus extends ((Term, Term) => Term) {
   }
 
   def unapply(t: Minus) = Some((t.p0, t.p1))
+}
+
+class RealMinus(val p0: Term, val p1: Term) extends RealArithmeticTerm
+  with BinaryOp[Term] with StructuralEqualityBinaryOp[Term] {
+
+  override val op = "-"
+}
+
+object RealMinus extends ((Term, Term) => Term) {
+  import predef.RealZero
+
+  def apply(e0: Term, e1: Term) = (e0, e1) match {
+    case (t0, RealZero) => t0
+    case (RealLiteral(n0), RealLiteral(n1)) => RealLiteral(n0 - n1)
+    case (t0, t1) if t0 == t1 => RealZero
+    case _ => new RealMinus(e0, e1)
+  }
+
+  def unapply(t: RealMinus) = Some((t.p0, t.p1))
 }
 
 class Times(val p0: Term, val p1: Term) extends ArithmeticTerm
@@ -633,8 +684,35 @@ object Times extends ((Term, Term) => Term) {
   def unapply(t: Times) = Some((t.p0, t.p1))
 }
 
+class RealTimes(val p0: Term, val p1: Term) extends RealArithmeticTerm
+  with BinaryOp[Term] with StructuralEqualityBinaryOp[Term] {
+
+  override val op = "*"
+}
+
+object RealTimes extends ((Term, Term) => Term) {
+  import predef.{RealZero, RealOne}
+
+  def apply(e0: Term, e1: Term) = (e0, e1) match {
+    case (_, RealZero) => RealZero
+    case (RealZero, _) => RealZero
+    case (t0, RealOne) => t0
+    case (RealOne, t1) => t1
+    case (RealLiteral(n0), RealLiteral(n1)) => RealLiteral(n0 * n1)
+    case _ => new RealTimes(e0, e1)
+  }
+
+  def unapply(t: RealTimes) = Some((t.p0, t.p1))
+}
+
 case class Div(p0: Term, p1: Term) extends ArithmeticTerm
     with BinaryOp[Term] {
+
+  override val op = "/"
+}
+
+case class RealDiv(p0: Term, p1: Term) extends RealArithmeticTerm
+  with BinaryOp[Term] {
 
   override val op = "/"
 }
@@ -1985,6 +2063,8 @@ object predef {
 
   val Zero = IntLiteral(0)
   val One = IntLiteral(1)
+  val RealZero = RealLiteral(0.0)
+  val RealOne = RealLiteral(1.0)
 }
 
 /* Convenience functions */

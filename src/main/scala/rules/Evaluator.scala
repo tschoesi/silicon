@@ -153,6 +153,7 @@ object evaluator extends EvaluationRules {
 
       case _: ast.NullLit => Q(s, Null(), v)
       case ast.IntLit(bigval) => Q(s, IntLiteral(bigval), v)
+      case ast.RealLit(bigval) => Q(s, RealLiteral(bigval), v)
 
       case ast.EqCmp(e0, e1) => evalBinOp(s, e0, e1, Equals, pve, v)(Q)
       case ast.NeCmp(e0, e1) => evalBinOp(s, e0, e1, (p0: Term, p1: Term) => Not(Equals(p0, p1)), pve, v)(Q)
@@ -270,6 +271,10 @@ object evaluator extends EvaluationRules {
         eval(s, e0, pve, v)((s1, t0, v1) =>
           Q(s1, Minus(0, t0), v1))
 
+      case ast.RealMinus(e0) =>
+        eval(s, e0, pve, v)((s1, t0, v1) =>
+          Q(s1, RealMinus(0, t0), v1))
+
       case ast.Old(e0) =>
         evalInOldState(s, Verifier.PRE_STATE_LABEL, e0, pve, v)(Q)
 
@@ -355,6 +360,33 @@ object evaluator extends EvaluationRules {
         evalBinOp(s, e0, e1, AtLeast, pve, v)(Q)
 
       case ast.GtCmp(e0, e1) =>
+        evalBinOp(s, e0, e1, Greater, pve, v)(Q)
+
+      /* Reals */
+
+      case ast.RealAdd(e0, e1) =>
+        evalBinOp(s, e0, e1, RealPlus, pve, v)(Q)
+
+      case ast.RealSub(e0, e1) =>
+        evalBinOp(s, e0, e1, RealMinus, pve, v)(Q)
+
+      case ast.RealMul(e0, e1) =>
+        evalBinOp(s, e0, e1, RealTimes, pve, v)(Q)
+
+      case ast.RealDiv(e0, e1) =>
+        evalBinOp(s, e0, e1, RealDiv, pve, v)((s1, tDiv, v1) =>
+          failIfDivByZero(s1, tDiv, e1, tDiv.p1, RealLiteral(0.0), pve, v1)(Q))
+
+      case ast.RealLeCmp(e0, e1) =>
+        evalBinOp(s, e0, e1, AtMost, pve, v)(Q)
+
+      case ast.RealLtCmp(e0, e1) =>
+        evalBinOp(s, e0, e1, Less, pve, v)(Q)
+
+      case ast.RealGeCmp(e0, e1) =>
+        evalBinOp(s, e0, e1, AtLeast, pve, v)(Q)
+
+      case ast.RealGtCmp(e0, e1) =>
         evalBinOp(s, e0, e1, Greater, pve, v)(Q)
 
       /* Permissions */

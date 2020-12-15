@@ -37,6 +37,7 @@ class TermToSMTLib2Converter
     case sorts.Perm => "$Perm"
     case sorts.Snap => "$Snap"
     case sorts.Ref => "$Ref"
+    case sorts.Real => "Real"
     case sorts.Seq(elementSort) => text("Seq<") <> render(elementSort) <> ">"
     case sorts.Set(elementSort) => text("Set<") <> render(elementSort) <> ">"
     case sorts.Multiset(elementSort) => text("Multiset<") <> render(elementSort) <> ">"
@@ -145,7 +146,7 @@ class TermToSMTLib2Converter
       case sort => sys.error(s"Don't know how to translate equality between symbols $sort-typed terms")
     }
 
-    /* Arithmetic */
+    /* Integer arithmetic */
 
     case bop: Minus => renderBinaryOp("-", bop)
     case bop: Plus => renderBinaryOp("+", bop)
@@ -159,6 +160,13 @@ class TermToSMTLib2Converter
     case bop: AtMost => renderBinaryOp("<=", bop)
     case bop: AtLeast => renderBinaryOp(">=", bop)
     case bop: Greater => renderBinaryOp(">", bop)
+
+    /* Real arithmetic */
+
+    case bop: RealMinus => renderBinaryOp("-", bop)
+    case bop: RealPlus => renderBinaryOp("+", bop)
+    case bop: RealTimes => renderBinaryOp("*", bop)
+    case bop: RealDiv => renderBinaryOp("/", bop)
 
     /* Permissions */
 
@@ -312,6 +320,10 @@ class TermToSMTLib2Converter
     case IntLiteral(n) =>
       if (n >= 0) n.toString()
       else parens(text("- 0") <+> value(-n))
+
+    case RealLiteral(r) =>
+      if (r >= 0.0) r.toString
+      else parens(text("- 0.0") <+> value(-r))
 
     case Unit => "$Snap.unit"
     case True() => "true"

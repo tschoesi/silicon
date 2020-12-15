@@ -117,6 +117,18 @@ trait ExpressionTranslator {
       case ast.LeCmp(e0, e1) => AtMost(f(e0), f(e1))
       case ast.LtCmp(e0, e1) => Less(f(e0), f(e1))
 
+      case ast.RealLit(r) => RealLiteral(r)
+      case ast.RealAdd(e0, e1) => RealPlus(f(e0), f(e1))
+      case ast.RealSub(e0, e1) => RealMinus(f(e0), f(e1))
+      case ast.RealMul(e0, e1) => RealTimes(f(e0), f(e1))
+      case ast.RealDiv(e0, e1) => RealDiv(f(e0), f(e1))
+      case ast.RealMinus(e0) => RealMinus(RealLiteral(0.0), f(e0))
+
+      case ast.RealGeCmp(e0, e1) => AtLeast(f(e0), f(e1))
+      case ast.RealGtCmp(e0, e1) => Greater(f(e0), f(e1))
+      case ast.RealLeCmp(e0, e1) => AtMost(f(e0), f(e1))
+      case ast.RealLtCmp(e0, e1) => Less(f(e0), f(e1))
+
       case _: ast.NullLit => Null()
 
       case v: ast.AbstractLocalVar => Var(Identifier(v.name), toSort(v.typ))
