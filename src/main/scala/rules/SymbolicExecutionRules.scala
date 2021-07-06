@@ -6,7 +6,7 @@
 
 package viper.silicon.rules
 
-import viper.silicon.interfaces.{Failure, SiliconNativeCounterexample, SiliconRawCounterexample, SiliconVariableCounterexample}
+import viper.silicon.interfaces._
 import viper.silicon.state.State
 import viper.silicon.verifier.Verifier
 import viper.silver.verifier.errors.ErrorWrapperWithExampleTransformer
@@ -21,7 +21,7 @@ trait SymbolicExecutionRules {
         wrapped
       case _ => ve
     }
-    if (v != null && Verifier.config.counterexample.toOption.isDefined) {
+    val counterexample: Option[Counterexample] = if (v != null && Verifier.config.counterexample.toOption.isDefined) {
       if (generateNewModel || v.decider.getModel() == null) {
         v.decider.generateModel()
       }
@@ -45,9 +45,19 @@ trait SymbolicExecutionRules {
           case Some(trafo) => trafo.f(ce)
           case _ => ce
         }
-        res.counterexample = Some(finalCE)
-      }
-    }
+        Some(finalCE)
+      } else None
+    } else None
+
+    val branchconditions = if (Verifier.config.enableBranchconditionReporting()) {
+      v.decider.pcs.branchConditionExps.flatten
+        .filterNot(e => e.isInstanceOf[viper.silver.ast.TrueLit]) /* remove "true" bcs introduced by viper.silicon.utils.ast.BigAnd */
+        .sortBy(_.pos match {/* Order branchconditions according to source position */
+          case pos: viper.silver.ast.HasLineColumn => (pos.line, pos.column)
+          case _ => (-1, -1)
+        })
+    } else Seq()
+    res.failureContexts = Seq(SilFailureContext(branchconditions, counterexample))
     Failure(res)
 
   }
