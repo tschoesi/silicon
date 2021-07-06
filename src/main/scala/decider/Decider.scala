@@ -33,7 +33,7 @@ trait Decider {
 
   def checkSmoke(): Boolean
 
-  def setCurrentBranchCondition(t: Term): Unit
+  def setCurrentBranchCondition(t: Term, te: Option[ast.Exp] = None): Unit
   def setPathConditionMark(): Mark
 
   def assume(t: Term): Unit
@@ -158,8 +158,8 @@ trait DefaultDeciderProvider extends VerifierComponent { this: Verifier =>
       pathConditions.popScope()
     }
 
-    def setCurrentBranchCondition(t: Term): Unit = {
-      pathConditions.setCurrentBranchCondition(t)
+    def setCurrentBranchCondition(t: Term, te: Option[ast.Exp] = None): Unit = {
+      pathConditions.setCurrentBranchCondition(t, te)
       assume(InsertionOrderedSet(Seq(t)))
     }
 
