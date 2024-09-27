@@ -468,10 +468,11 @@ object consumer extends ConsumptionRules {
             v2.decider.assume(t)
             QS(s3, v2)
           case false =>
-            if (s3.retrying){
+            val failure = createFailure(pve dueTo AssertionFalse(e), v2, s3)
+            if (s3.retryLevel == 0 && v2.reportFurtherErrors()){
               v2.decider.assume(t)
-              createFailure(pve dueTo AssertionFalse(e), v2, s3) combine QS(s3, v2)
-            } else createFailure(pve dueTo AssertionFalse(e), v2, s3)}})
+              failure combine QS(s3, v2)
+            } else failure}})
     })((s4, v4) => {
       val s5 = s4.copy(h = s.h,
                        reserveHeaps = s.reserveHeaps,

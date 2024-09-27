@@ -11,6 +11,7 @@ import viper.silicon.reporting.Converter
 import viper.silicon.state.{State, Store}
 import viper.silver.verifier.{Counterexample, FailureContext, Model, VerificationError}
 import viper.silicon.state.terms.Term
+import viper.silicon.verifier.Verifier
 import viper.silver.ast
 
 /*
@@ -24,6 +25,7 @@ import viper.silver.ast
 /* TODO: Make VerificationResult immutable */
 sealed abstract class VerificationResult {
   var previous: Vector[VerificationResult] = Vector() //Sets had problems with equality
+  val continueVerification: Boolean = true
 
   def isFatal: Boolean
   def &&(other: => VerificationResult): VerificationResult
@@ -35,15 +37,20 @@ sealed abstract class VerificationResult {
    * will invoke the function twice, which might not be what you really want!
    */
   def combine(other: => VerificationResult): VerificationResult = {
-    val r: VerificationResult = other
-    this match {
-      case _ : FatalResult =>
-        this.previous = (this.previous :+ r) ++  r.previous
-        this
-      case _ =>
-        r.previous = (r.previous :+ this) ++ this.previous
-        r
-    }
+    if (this.continueVerification){
+      val r: VerificationResult = other
+      /* Result of combining a failure with a non failure should be a failure.
+      *  When combining two failures, the failure with 'continueVerification'
+      *  set to false (if any) should be the 'head' result */
+      (this, r) match {
+        case (_: FatalResult, _: FatalResult) | (_: FatalResult, _: NonFatalResult) if r.continueVerification =>
+          this.previous = (this.previous :+ r) ++ r.previous
+          this
+        case _ =>
+          r.previous = (r.previous :+ this) ++ this.previous
+          r
+      }
+    } else this
   }
 }
 
@@ -64,7 +71,8 @@ sealed abstract class NonFatalResult extends VerificationResult {
    */
   def &&(other: => VerificationResult): VerificationResult = {
     val r: VerificationResult = other
-    r.combine(this)
+    r.previous = (r.previous :+ this) ++ this.previous
+    r
   }
 }
 
@@ -79,7 +87,7 @@ case class Unreachable() extends NonFatalResult {
 case class Failure/*[ST <: Store[ST],
                    H <: Heap[H],
                    S <: State[ST, H, S]]*/
-                  (message: VerificationError)
+                  (message: VerificationError, override val continueVerification: Boolean = true)
   extends FatalResult {
 
   /* TODO: Mutable state in a case class? DOOOOOOOOOOOOOON'T! */
